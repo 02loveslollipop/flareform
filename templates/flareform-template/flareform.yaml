@@ -1,0 +1,17 @@
+version: 1
+reconciliation: keep
+records:
+  - key: service-ipv4-me
+    zone: example.com
+    name: service.example.com
+    type: A
+    content: ${DEPLOYMENT_IPV4}
+    proxied: false
+    ttl: 300
+  - key: service-ipv4-uk
+    zone: example.net
+    name: service.example.net
+    type: A
+    content: ${DEPLOYMENT_IPV4}
+    proxied: false
+    ttl: 300

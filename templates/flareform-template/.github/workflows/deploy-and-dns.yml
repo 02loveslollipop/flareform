@@ -1,0 +1,56 @@
+name: Deploy and reconcile DNS
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-dns-${{ github.repository_id }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      ipv4: ${{ steps.deployment.outputs.ipv4 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Replace this step with the real deployment and expose its validated IP.
+      - id: deployment
+        env:
+          DEPLOYMENT_IPV4: ${{ vars.DEPLOYMENT_IPV4 }}
+        run: |
+          case "$DEPLOYMENT_IPV4" in
+            ''|*[!0-9.]*) exit 1 ;;
+          esac
+          echo "ipv4=$DEPLOYMENT_IPV4" >> "$GITHUB_OUTPUT"
+
+  dns:
+    needs: deploy
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DEPLOYMENT_IPV4: ${{ needs.deploy.outputs.ipv4 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the authorized DNS plan
+        uses: 02loveslollipop/flareform/github-action@60d6f504e2204caac474e8adfd96868fec309be3
+        with:
+          operation: plan
+          manifest: flareform.yaml
+      - name: Apply the authorized DNS state
+        uses: 02loveslollipop/flareform/github-action@60d6f504e2204caac474e8adfd96868fec309be3
+        with:
+          operation: apply
+          manifest: flareform.yaml
