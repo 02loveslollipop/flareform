@@ -1,0 +1,13 @@
+* @02loveslollipop
+/.github/ @02loveslollipop
+/config/ @02loveslollipop
+/migrations/ @02loveslollipop
+/src/admin/ @02loveslollipop
+/src/audit/ @02loveslollipop
+/src/auth/ @02loveslollipop
+/src/db/ @02loveslollipop
+/src/dns/ @02loveslollipop
+/src/http/ @02loveslollipop
+/github-action/ @02loveslollipop
+/scripts/ @02loveslollipop
+/wrangler.jsonc @02loveslollipop

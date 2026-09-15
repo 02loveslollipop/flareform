@@ -1,0 +1,22 @@
+# Example only: replace GitHub IDs with immutable numeric IDs from GitHub.
+github:
+  repository_id: "123456789"
+  owner_id: "987654321"
+  display_name: Example Application
+oidc:
+  event: push
+  ref: refs/heads/main
+  environment: production
+  workflow_ref: example-org/example-app/.github/workflows/deploy.yml@refs/heads/main
+  runner_environment: github-hosted
+operations:
+  allow_prune: false
+grants:
+  - zone: example.com
+    exact: [example-app.example.com]
+    descendants: [example-app.example.com]
+    record_types: [A, AAAA, CNAME, SRV]
+  - zone: example.net
+    exact: [example-app.example.net]
+    descendants: [example-app.example.net]
+    record_types: [A, AAAA, CNAME, SRV]

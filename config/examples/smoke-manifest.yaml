@@ -1,0 +1,17 @@
+version: 1
+reconciliation: keep
+records:
+  - key: smoke-ipv4-me
+    zone: example.com
+    name: flareform-smoke.example.com
+    type: A
+    content: 192.0.2.1
+    proxied: false
+    ttl: 300
+  - key: smoke-ipv4-uk
+    zone: example.net
+    name: flareform-smoke.example.net
+    type: A
+    content: 192.0.2.1
+    proxied: false
+    ttl: 300

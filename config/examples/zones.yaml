@@ -1,0 +1,8 @@
+# Replace the placeholder IDs with your actual Cloudflare zone IDs before sync.
+zones:
+  - name: example.com
+    cloudflare_zone_id: "00000000000000000000000000000001"
+    enabled: true
+  - name: example.net
+    cloudflare_zone_id: "00000000000000000000000000000002"
+    enabled: true

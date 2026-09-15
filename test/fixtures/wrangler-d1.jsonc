@@ -1,0 +1,12 @@
+{
+  "name": "flareform-d1-batch-test",
+  "main": "d1-batch-worker.js",
+  "compatibility_date": "2026-09-11",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "flareform-batch-test",
+      "database_id": "00000000-0000-4000-8000-000000000001",
+    },
+  ],
+}

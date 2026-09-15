@@ -1,0 +1,65 @@
+name: Adopt one DNS record
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository_id:
+        description: Immutable GitHub repository ID
+        required: true
+        type: string
+      client_key:
+        description: New manifest client key
+        required: true
+        type: string
+      zone:
+        description: Canonical configured zone name
+        required: true
+        type: choice
+        options:
+          - example.com
+          - example.net
+      record_id:
+        description: Exact existing Cloudflare DNS record ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  adopt:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dns-administration
+    concurrency:
+      group: flareform-dns-administration
+      cancel-in-progress: false
+    env:
+      FLAREFORM_ADMIN_ENVIRONMENT: dns-administration
+      FLAREFORM_CONTROL_REPOSITORY: ${{ github.repository }}
+      FLAREFORM_D1_ADMIN_TOKEN: ${{ secrets.FLAREFORM_D1_ADMIN_TOKEN }}
+      FLAREFORM_DNS_ADMIN_TOKEN: ${{ secrets.FLAREFORM_DNS_ADMIN_TOKEN }}
+      FLAREFORM_ACCOUNT_ID: ${{ secrets.FLAREFORM_ACCOUNT_ID }}
+      FLAREFORM_DATABASE_ID: ${{ secrets.FLAREFORM_DATABASE_ID }}
+      ADOPT_REPOSITORY_ID: ${{ inputs.repository_id }}
+      ADOPT_CLIENT_KEY: ${{ inputs.client_key }}
+      ADOPT_ZONE: ${{ inputs.zone }}
+      ADOPT_RECORD_ID: ${{ inputs.record_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Review dry-run and adopt exact record
+        run: >-
+          node scripts/adopt-record.js --apply
+          --account-id "$FLAREFORM_ACCOUNT_ID"
+          --database-id "$FLAREFORM_DATABASE_ID"
+          --repository-id "$ADOPT_REPOSITORY_ID"
+          --client-key "$ADOPT_CLIENT_KEY"
+          --zone "$ADOPT_ZONE"
+          --record-id "$ADOPT_RECORD_ID"

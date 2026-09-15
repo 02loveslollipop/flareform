@@ -1,0 +1,117 @@
+name: Deploy trusted FlareForm main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flareform-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: github-action
+      - run: npm audit --audit-level=high
+      - run: npm audit --prefix github-action --omit=dev --audit-level=high
+      - run: node scripts/scan-secrets.js
+      - run: npm run check
+
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && vars.FLAREFORM_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: github-action
+      - name: Materialize protected Worker configuration
+        env:
+          CONFIG_PATH: ${{ runner.temp }}/wrangler.production.jsonc
+          FLAREFORM_WRANGLER_CONFIG: ${{ secrets.FLAREFORM_WRANGLER_CONFIG }}
+        run: >-
+          node --input-type=module -e
+          'import {writeFile} from "node:fs/promises";
+          await writeFile(process.env.CONFIG_PATH,
+          process.env.FLAREFORM_WRANGLER_CONFIG, {mode: 0o600});'
+      - name: Capture previous Worker version
+        id: previous
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          CONFIG_PATH: ${{ runner.temp }}/wrangler.production.jsonc
+          VERSIONS_PATH: ${{ runner.temp }}/worker-versions.json
+        run: |
+          npx wrangler versions list --config "$CONFIG_PATH" --json > "$VERSIONS_PATH"
+          node scripts/select-worker-version.js "$VERSIONS_PATH" >> "$GITHUB_OUTPUT"
+      - name: Apply forward-compatible D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          CONFIG_PATH: ${{ runner.temp }}/wrangler.production.jsonc
+        run: >-
+          npm run migrate:remote -- --config "$CONFIG_PATH" --confirm-remote
+      - name: Validate trusted policy
+        run: npm run policy:validate
+      - name: Synchronize trusted policy atomically
+        env:
+          FLAREFORM_D1_ADMIN_TOKEN: ${{ secrets.FLAREFORM_D1_ADMIN_TOKEN }}
+          FLAREFORM_ACCOUNT_ID: ${{ secrets.FLAREFORM_ACCOUNT_ID }}
+          FLAREFORM_DATABASE_ID: ${{ secrets.FLAREFORM_DATABASE_ID }}
+        run: >-
+          node scripts/sync-config.js --apply --config-dir config
+          --account-id "$FLAREFORM_ACCOUNT_ID"
+          --database-id "$FLAREFORM_DATABASE_ID" --confirm-remote
+      - name: Deploy reviewed Worker
+        id: worker_deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          CONFIG_PATH: ${{ runner.temp }}/wrangler.production.jsonc
+        run: npx wrangler deploy --config "$CONFIG_PATH"
+      - name: Smoke-test fixed health endpoint
+        run: >-
+          node --input-type=module -e
+          'const r = await fetch("https://dns.02labs.me/healthz",
+          {redirect:"error", signal:AbortSignal.timeout(10000)});
+          if (r.status !== 200 || await r.text() !== "{\"status\":\"ok\"}")
+          process.exit(1);'
+      - name: Smoke-test authenticated read-only plan
+        uses: ./github-action
+        with:
+          operation: plan
+          manifest: config/examples/smoke-manifest.yaml
+      - name: Roll back Worker after failed post-deploy smoke test
+        if: failure() && steps.worker_deploy.outcome == 'success' && steps.previous.outputs.version != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          CONFIG_PATH: ${{ runner.temp }}/wrangler.production.jsonc
+          PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
+        run: >-
+          npx wrangler rollback "$PREVIOUS_VERSION" --config "$CONFIG_PATH"
+          --message "Automated rollback after failed smoke test" --yes

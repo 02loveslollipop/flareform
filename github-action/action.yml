@@ -1,0 +1,14 @@
+name: FlareForm
+description: Secure declarative Cloudflare DNS management through FlareForm
+inputs:
+  manifest:
+    description: Workspace-relative FlareForm manifest path
+    required: false
+    default: flareform.yaml
+  operation:
+    description: Exact operation, either plan or apply
+    required: false
+    default: apply
+runs:
+  using: node24
+  main: dist/index.js
