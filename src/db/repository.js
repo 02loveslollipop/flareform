@@ -949,27 +949,6 @@ export class DnsRepository {
     ).all();
   }
 
-  listUnexportedAudit(limit = 100) {
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
-      throw new TypeError("invalid audit export limit");
-    return this.statement(
-      `SELECT a.* FROM audit_log a LEFT JOIN audit_exports e ON e.audit_id = a.id
-       WHERE e.audit_id IS NULL ORDER BY a.id LIMIT ?`,
-      limit,
-    ).all();
-  }
-
-  markAuditExported(auditId, objectKey, exportedAt) {
-    return this.statement(
-      `INSERT INTO audit_exports(audit_id, object_key, exported_at)
-       SELECT id, ?, ? FROM audit_log WHERE id = ?
-       ON CONFLICT(audit_id) DO NOTHING`,
-      objectKey,
-      exportedAt,
-      auditId,
-    ).run();
-  }
-
   appendAudit({
     operationId,
     repositoryId,

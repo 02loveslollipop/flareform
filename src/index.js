@@ -8,7 +8,6 @@ export default {
   async scheduled(controller, env) {
     await runScheduledMaintenance({
       db: env.DB,
-      bucket: env.AUDIT_ARCHIVE,
       token: env.CLOUDFLARE_DNS_TOKEN,
       scheduledTime: controller.scheduledTime,
     });

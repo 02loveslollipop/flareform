@@ -32,10 +32,9 @@ verified.
 
 ## 3. Provision and configure
 
-1. Create D1 database `flareform` and an R2 audit archive bucket.
-2. Create an uncommitted production Wrangler configuration binding D1 as `DB`,
-   R2 as `AUDIT_ARCHIVE`, and the required `RATE_LIMITER`; configure a UTC audit
-   export cron trigger.
+1. Create D1 database `flareform`.
+2. Create an uncommitted production Wrangler configuration binding D1 as `DB`
+   and the required `RATE_LIMITER`; configure a UTC maintenance cron trigger.
 3. Add the fixed custom route `dns.02labs.me` and store a separate random
    `PLAN_HMAC_KEY` Worker secret of at least 32 bytes.
 4. Apply migrations in numeric order with `npm run migrate:remote -- --config
@@ -52,12 +51,12 @@ verified.
 Use unique disposable names under a grant created solely for verification. Save
 an external inventory first. In `keep` mode, plan and create A records in both
 zones, then verify Cloudflare content/metadata, D1 claims/managed rows, operation
-checkpoints, and audit intent/outcome/export. Update both values and repeat all
+   checkpoints, audit intent/outcome, and relational maintenance snapshots. Update both values and repeat all
 checks. Finally enable prune through a separate reviewed policy change, obtain a
 fresh deletion plan, delete both records, and verify DNS, D1, and audit state.
 
 Record the real workflow run IDs, FlareForm operation IDs, policy version,
-inventory object, audit export keys, and reviewer/date in the release evidence.
+maintenance run ID, relevant audit row IDs, and reviewer/date in the release evidence.
 Do not treat local mocks as this production gate. If either zone is partial or
 indeterminate, stop and follow `docs/indeterminate-recovery.md`; never compensate
 by blindly deleting or recreating records.
