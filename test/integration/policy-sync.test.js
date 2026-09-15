@@ -236,10 +236,13 @@ test("SEC-POL-002 remote adapter sends bound atomic batch and never accepts fail
   });
   await db.batch([db.prepare("SELECT ?").bind("x'; DROP TABLE zones; --")]);
   const sent = JSON.parse(observed.body).batch;
-  assert.equal(sent[0].sql, "BEGIN TRANSACTION");
-  assert.equal(sent.at(-1).sql, "COMMIT");
-  assert.equal(sent[1].params[0], "x'; DROP TABLE zones; --");
-  assert.equal(sent[1].sql, "SELECT ?");
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].params[0], "x'; DROP TABLE zones; --");
+  assert.equal(sent[0].sql, "SELECT ?");
+  assert.equal(
+    sent.some(({ sql }) => /^(?:BEGIN|COMMIT)\b/i.test(sql)),
+    false,
+  );
   assert.equal(observed.redirect, "error");
   succeed = false;
   await assert.rejects(
