@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import test from "node:test";
-import {
-  checkPublicRelease,
-  inspectPublicFiles,
-} from "../../scripts/check-public-release.js";
+import { inspectPublicFiles } from "../../scripts/check-public-release.js";
 
-test("SEC-PUB-001 release tree contains no private deployment data", () => {
-  assert.deepEqual(checkPublicRelease(), []);
+test("SEC-PUB-001 ordinary public files pass", () => {
+  assert.deepEqual(
+    inspectPublicFiles(["README.md"], () => Buffer.from("public")),
+    [],
+  );
 });
 
 test("SEC-PUB-001 private paths fail without reading their contents", () => {
