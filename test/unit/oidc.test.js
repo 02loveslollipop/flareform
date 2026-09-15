@@ -112,7 +112,9 @@ async function fixture() {
 
 test("OIDC-UNIT-001 valid signed token and contextual claims pass", async () => {
   const f = await fixture();
-  const claims = await f.verify(await f.sign());
+  const claims = await f.verify(
+    await f.sign({}, { x5t: "1B2M2Y8AsgTpgAmY7PhCfg".padEnd(27, "A") }),
+  );
   assert.equal(authorizeOidcClaims(claims, policy).repository, policy);
 });
 
@@ -129,11 +131,18 @@ test("OIDC-UNIT-002/004/005/006/013/014 invalid signature, issuer, audience, tim
   for (const header of [
     { typ: "at+jwt" },
     { kid: "no-key" },
+    { x5t: "not-a-sha1-thumbprint" },
     { jku: "https://evil.test/key" },
   ])
     await assert.rejects(f.verify(await f.sign({}, header)));
   const broken = await f.sign();
-  await assert.rejects(f.verify(`${broken.slice(0, -2)}xx`));
+  const [brokenHeader, brokenPayload, brokenSignature] = broken.split(".");
+  const flipped = brokenSignature[0] === "A" ? "B" : "A";
+  await assert.rejects(
+    f.verify(
+      `${brokenHeader}.${brokenPayload}.${flipped}${brokenSignature.slice(1)}`,
+    ),
+  );
 });
 
 test("OIDC-UNIT-007/015/016 missing and mistyped identity fields fail", async () => {

@@ -202,7 +202,12 @@ export function createOidcVerifier({
       header.alg !== "RS256" ||
       header.typ !== "JWT" ||
       !nonempty(header.kid, 128) ||
-      Object.keys(header).some((key) => !["alg", "typ", "kid"].includes(key)) ||
+      (header.x5t !== undefined &&
+        (typeof header.x5t !== "string" ||
+          !/^[A-Za-z0-9_-]{27}$/.test(header.x5t))) ||
+      Object.keys(header).some(
+        (key) => !["alg", "typ", "kid", "x5t"].includes(key),
+      ) ||
       !plainObject(rawPayload)
     )
       invalid();
