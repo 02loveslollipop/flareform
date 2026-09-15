@@ -23,6 +23,9 @@ const policySql = fileURLToPath(
 const admissionSql = fileURLToPath(
   new URL("../../migrations/0003_apply_admission.sql", import.meta.url),
 );
+const maintenanceSql = fileURLToPath(
+  new URL("../../migrations/0004_d1_maintenance_storage.sql", import.meta.url),
+);
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), "flareform-migration-test-"));
@@ -36,6 +39,10 @@ async function fixture(t) {
   await copyFile(
     admissionSql,
     join(root, "migrations", "0003_apply_admission.sql"),
+  );
+  await copyFile(
+    maintenanceSql,
+    join(root, "migrations", "0004_d1_maintenance_storage.sql"),
   );
   const config = join(root, "wrangler.jsonc");
   const state = join(root, "state");
@@ -96,7 +103,7 @@ function query({ config, state }, sqlCommand) {
 test("DB-MIG-001/002 Wrangler applies ordered migration once and records its version", async (t) => {
   const location = await fixture(t);
   assert.match(apply(location), /0001_initial.sql/);
-  assert.equal(query(location, "SELECT name FROM d1_migrations").length, 3);
+  assert.equal(query(location, "SELECT name FROM d1_migrations").length, 4);
   assert.equal(
     query(location, "SELECT name FROM d1_migrations ORDER BY name")[0].name,
     "0001_initial.sql",
@@ -104,7 +111,7 @@ test("DB-MIG-001/002 Wrangler applies ordered migration once and records its ver
   apply(location);
   assert.equal(
     query(location, "SELECT count(*) AS n FROM d1_migrations")[0].n,
-    3,
+    4,
   );
   assert.equal(query(location, "PRAGMA foreign_keys")[0].foreign_keys, 1);
 });
@@ -113,7 +120,7 @@ test("DB-MIG-003 failed migration rolls back and preserves earlier schema", asyn
   const location = await fixture(t);
   apply(location);
   await writeFile(
-    join(location.root, "migrations", "0004_broken.sql"),
+    join(location.root, "migrations", "0005_broken.sql"),
     "CREATE TABLE rollback_probe(id INTEGER PRIMARY KEY);\nINSERT INTO does_not_exist VALUES (1);\n",
   );
   const result = spawnSync(
@@ -134,7 +141,7 @@ test("DB-MIG-003 failed migration rolls back and preserves earlier schema", asyn
   assert.notEqual(result.status, 0);
   assert.equal(
     query(location, "SELECT count(*) AS n FROM d1_migrations")[0].n,
-    3,
+    4,
   );
   assert.equal(
     query(
@@ -161,6 +168,7 @@ test("DB-MIG-004 no prior schema is supported before 0001", async (t) => {
       "0001_initial.sql",
       "0002_policy_versions.sql",
       "0003_apply_admission.sql",
+      "0004_d1_maintenance_storage.sql",
     ],
   );
 });
@@ -183,4 +191,17 @@ test("DB-MIG-006 trigger CASE expressions are compatible with remote D1 parsing"
   const source = await readFile(admissionSql, "utf8");
   assert.doesNotMatch(source, /SELECT CASE/);
   assert.equal(source.match(/SELECT \(CASE/g)?.length, 7);
+});
+
+test("DB-MIG-007 D1 replaces object-storage export state", async () => {
+  const source = await readFile(maintenanceSql, "utf8");
+  assert.match(source, /DROP TABLE audit_exports/);
+  for (const table of [
+    "maintenance_runs",
+    "inventory_zone_snapshots",
+    "inventory_record_snapshots",
+    "ownership_findings",
+  ])
+    assert.match(source, new RegExp(`CREATE TABLE ${table}`));
+  assert.doesNotMatch(source, /R2|object_key/i);
 });

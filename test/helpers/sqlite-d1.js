@@ -13,6 +13,13 @@ const migration =
   readFileSync(
     new URL("../../migrations/0003_apply_admission.sql", import.meta.url),
     "utf8",
+  ) +
+  readFileSync(
+    new URL(
+      "../../migrations/0004_d1_maintenance_storage.sql",
+      import.meta.url,
+    ),
+    "utf8",
   );
 
 export function sqliteD1(filename = ":memory:", initialize = true) {

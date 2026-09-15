@@ -78,7 +78,7 @@ test("OPS/SEC-MON scheduled controls are configured and alert guidance excludes 
     "replay",
     "prune attempts",
     "partial or indeterminate",
-    "audit-export failure",
+    "maintenance persistence failure",
     "Leaked runtime token",
     "Compromised application repository",
     "Compromised control plane",
