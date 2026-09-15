@@ -69,15 +69,12 @@ export function remoteD1({ accountId, databaseId, token, fetchImpl = fetch }) {
   });
   return {
     prepare: (sql) => prepare(sql),
-    // The REST API supports explicit transactions inside a batch. If BEGIN
-    // is rejected, fail before the first policy write.
+    // D1 executes a REST API batch as a transaction and rolls the whole batch
+    // back if any statement fails. Explicit transaction statements are not
+    // supported by D1 and would make every remote policy sync fail.
     batch: async (statements) =>
       query({
-        batch: [
-          { sql: "BEGIN TRANSACTION" },
-          ...statements.map((item) => item._query),
-          { sql: "COMMIT" },
-        ],
+        batch: statements.map((item) => item._query),
       }),
   };
 }
