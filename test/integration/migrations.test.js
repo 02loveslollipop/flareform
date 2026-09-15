@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -176,4 +177,10 @@ test("DB-MIG-005 remote migration requires explicit confirmation and operator co
   );
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Usage:/);
+});
+
+test("DB-MIG-006 trigger CASE expressions are compatible with remote D1 parsing", async () => {
+  const source = await readFile(admissionSql, "utf8");
+  assert.doesNotMatch(source, /SELECT CASE/);
+  assert.equal(source.match(/SELECT \(CASE/g)?.length, 7);
 });
