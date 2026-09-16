@@ -22,6 +22,7 @@ const record = {
   ttl: 60,
   ...metadata,
 };
+const unmanagedRecord = { ...record, comment: null, tags: null };
 const desired = {
   name: record.name,
   type: "A",
@@ -44,10 +45,13 @@ test("CF-UNIT-001 full pagination and duplicate API state fail closed", async ()
     fetchImpl: async (url, options) => {
       calls.push({ url, options });
       const page = Number(new URL(url).searchParams.get("page"));
-      return ok(page === 1 ? [record] : [{ ...record, id: id2 }], {
-        page,
-        total_pages: 2,
-      });
+      return ok(
+        page === 1 ? [unmanagedRecord] : [{ ...unmanagedRecord, id: id2 }],
+        {
+          page,
+          total_pages: 2,
+        },
+      );
     },
   });
   assert.equal((await client.listRecords(zone)).length, 2);

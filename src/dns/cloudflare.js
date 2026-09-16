@@ -143,7 +143,9 @@ function validateRecord(record) {
     typeof record.type !== "string" ||
     !Number.isSafeInteger(record.ttl) ||
     !Array.isArray(record.tags ?? []) ||
-    (typeof record.comment !== "string" && record.comment !== undefined)
+    (typeof record.comment !== "string" &&
+      record.comment !== null &&
+      record.comment !== undefined)
   )
     fail();
   return record;
