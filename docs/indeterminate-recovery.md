@@ -4,6 +4,14 @@ An operation becomes indeterminate when FlareForm persisted a mutation as sent b
 
 Recovery is an operator-only control-plane procedure. It is deliberately absent from the public Worker routes. Run the administrative reconciliation module from a protected environment with a D1 binding, the same zone-limited Cloudflare DNS token, and an immutable numeric operator identity. First invoke `inspectIndeterminate` for the exact operation ID and client key. Preserve its redacted evidence with the incident record and independently compare the D1 intent/audit history, record ID, complete same-name/type Cloudflare set, and FlareForm tags/comment.
 
+The protected control-plane workflow in
+`examples/github-workflows/reconcile-record.yml` runs that inspection before
+any resolution. Its `FLAREFORM_DNS_ADMIN_TOKEN` and
+`FLAREFORM_D1_ADMIN_TOKEN` must be separate from the Worker runtime and
+deployment credentials. A local operator may run `scripts/reconcile-record.js`
+with `--inspect`; `--resolve` additionally requires an explicit decision,
+numeric operator ID, and `--confirm-resolution` outside approved CI.
+
 Choose one resolution explicitly:
 
 - `confirm-provider` only when the provider state proves the requested outcome. Create/update requires exactly one record carrying the expected repository/client metadata; update must retain the expected record ID. Delete requires the expected record ID to be absent.
