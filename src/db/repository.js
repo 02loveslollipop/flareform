@@ -606,11 +606,31 @@ export class DnsRepository {
         now,
       ),
       this.statement(
-        "DELETE FROM operation_locks WHERE operation_id = ? AND zone_id = ? AND name = ? AND type = ?",
+        `DELETE FROM record_claims WHERE repository_id = ? AND zone_id = ?
+         AND state = 'reserved'
+         AND EXISTS (SELECT 1 FROM operation_locks l
+           WHERE l.operation_id = ? AND l.zone_id = record_claims.zone_id
+             AND l.name = record_claims.name AND l.type = record_claims.type)
+         AND NOT EXISTS (SELECT 1 FROM mutation_intents m
+           WHERE m.operation_id = ? AND m.zone_id = record_claims.zone_id
+             AND m.record_name = record_claims.name
+             AND m.record_type = record_claims.type)
+         AND NOT EXISTS (SELECT 1 FROM managed_records mr
+           WHERE mr.record_claim_id = record_claims.id)`,
+        repositoryId,
+        zoneId,
+        operationId,
+        operationId,
+      ),
+      this.statement(
+        `DELETE FROM operation_locks WHERE operation_id = ? AND zone_id = ?
+         AND NOT EXISTS (SELECT 1 FROM mutation_intents m
+           WHERE m.operation_id = ? AND m.zone_id = ?
+             AND m.status NOT IN ('confirmed', 'resolved'))`,
         operationId,
         zoneId,
-        intent.record_name,
-        intent.record_type,
+        operationId,
+        zoneId,
       ),
       this.statement(
         `UPDATE operation_zones SET status = 'reconciled', error_code = NULL,

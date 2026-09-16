@@ -10,6 +10,7 @@ import { sqliteD1 } from "../helpers/sqlite-d1.js";
 
 const now = "2026-09-14T00:00:00Z";
 const name = "example-app.example.com";
+const untouchedName = "www.example-app.example.com";
 async function fixture(t) {
   const location = sqliteD1();
   t.after(location.close);
@@ -36,8 +37,14 @@ async function fixture(t) {
     },
     jti: "jti",
     jtiExpiresAt: 2000000000,
-    claims: [{ zoneId: 1, name, type: "A" }],
-    locks: [{ zoneId: 1, name, type: "A" }],
+    claims: [
+      { zoneId: 1, name, type: "A" },
+      { zoneId: 1, name: untouchedName, type: "A" },
+    ],
+    locks: [
+      { zoneId: 1, name, type: "A" },
+      { zoneId: 1, name: untouchedName, type: "A" },
+    ],
     zoneIds: [1],
     now,
   });
@@ -125,6 +132,7 @@ test("REC-001 inspection is read-only, redacted, and requires explicit resolutio
     (await f.repo.listOperationLocks("ffop_test")).results.length,
     0,
   );
+  assert.equal(await f.repo.getClaim(1, untouchedName, "A"), null);
   assert.equal((await f.repo.getOperation("ffop_test")).status, "reconciled");
   assert.equal(
     f.sqlite.prepare("SELECT action FROM audit_log ORDER BY id DESC").get()
@@ -179,6 +187,27 @@ test("REC-002 ambiguous or unmanaged provider evidence cannot be resolved", asyn
     );
   assert.equal(
     (await f.repo.listOperationLocks("ffop_test")).results.length,
-    1,
+    2,
   );
+});
+
+test("REC-003 confirmed no-change releases only reserved sets never sent", async (t) => {
+  const f = await fixture(t);
+  const resolved = await resolveIndeterminate({
+    db: f.db,
+    cloudflare: { listRecords: async () => [] },
+    operationId: "ffop_test",
+    clientKey: "main",
+    decision: "confirm-no-change",
+    operatorId: "900",
+    now: Date.parse(now),
+  });
+  assert.equal(resolved.resolved, true);
+  assert.equal(await f.repo.getClaim(1, name, "A"), null);
+  assert.equal(await f.repo.getClaim(1, untouchedName, "A"), null);
+  assert.equal(
+    (await f.repo.listOperationLocks("ffop_test")).results.length,
+    0,
+  );
+  assert.equal((await f.repo.getOperation("ffop_test")).status, "reconciled");
 });
