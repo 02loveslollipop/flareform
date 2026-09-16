@@ -122,7 +122,10 @@ export function createOidcVerifier({
       });
     const response = await bounded(
       fetchImpl(url, {
-        redirect: "error",
+        // Workerd supports manual redirect handling, not the Fetch API's
+        // "error" mode. The response checks below still fail closed on every
+        // redirect without following it.
+        redirect: "manual",
         signal,
         headers: { accept: "application/json" },
       }),

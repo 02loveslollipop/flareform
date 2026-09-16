@@ -188,7 +188,10 @@ export function createCloudflareClient({
         const response = await bounded(
           fetchImpl(url, {
             method,
-            redirect: "error",
+            // Workerd supports manual redirect handling, not the Fetch API's
+            // "error" mode. Redirect responses are rejected below before a
+            // body is read or a second request can carry the bearer token.
+            redirect: "manual",
             signal,
             headers: {
               authorization: `Bearer ${token}`,
