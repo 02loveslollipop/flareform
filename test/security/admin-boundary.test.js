@@ -52,3 +52,20 @@ test("SEC-ADM-002 adoption workflow is manual, main-only, environment-gated, and
   for (const match of workflow.matchAll(/uses: [^@\n]+@([^\s#]+)/g))
     assert.match(match[1], /^[0-9a-f]{40}$/);
 });
+
+test("SEC-ADM-003 reconciliation workflow is manual, main-only, environment-gated, and pinned", async () => {
+  const workflow = await readFile(
+    new URL(
+      "../../examples/github-workflows/reconcile-record.yml",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /environment: dns-administration/);
+  assert.match(workflow, /reconcile-record\.js --resolve/);
+  assert.doesNotMatch(workflow, /pull_request:|push:/);
+  for (const match of workflow.matchAll(/uses: [^@\n]+@([^\s#]+)/g))
+    assert.match(match[1], /^[0-9a-f]{40}$/);
+});

@@ -1,0 +1,61 @@
+name: Reconcile one indeterminate DNS record
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation_id:
+        description: Exact FlareForm operation ID
+        required: true
+        type: string
+      client_key:
+        description: Exact manifest client key
+        required: true
+        type: string
+      decision:
+        description: Explicit resolution after reviewing provider evidence
+        required: true
+        type: choice
+        options:
+          - confirm-no-change
+          - confirm-provider
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dns-administration
+    concurrency:
+      group: flareform-dns-administration
+      cancel-in-progress: false
+    env:
+      FLAREFORM_ADMIN_ENVIRONMENT: dns-administration
+      FLAREFORM_CONTROL_REPOSITORY: ${{ github.repository }}
+      FLAREFORM_D1_ADMIN_TOKEN: ${{ secrets.FLAREFORM_D1_ADMIN_TOKEN }}
+      FLAREFORM_DNS_ADMIN_TOKEN: ${{ secrets.FLAREFORM_DNS_ADMIN_TOKEN }}
+      FLAREFORM_ACCOUNT_ID: ${{ secrets.FLAREFORM_ACCOUNT_ID }}
+      FLAREFORM_DATABASE_ID: ${{ secrets.FLAREFORM_DATABASE_ID }}
+      RECONCILE_OPERATION_ID: ${{ inputs.operation_id }}
+      RECONCILE_CLIENT_KEY: ${{ inputs.client_key }}
+      RECONCILE_DECISION: ${{ inputs.decision }}
+      RECONCILE_OPERATOR_ID: ${{ github.actor_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Inspect and resolve exact indeterminate record
+        run: >-
+          node scripts/reconcile-record.js --resolve
+          --account-id "$FLAREFORM_ACCOUNT_ID"
+          --database-id "$FLAREFORM_DATABASE_ID"
+          --operation-id "$RECONCILE_OPERATION_ID"
+          --client-key "$RECONCILE_CLIENT_KEY"
+          --decision "$RECONCILE_DECISION"
+          --operator-id "$RECONCILE_OPERATOR_ID"
