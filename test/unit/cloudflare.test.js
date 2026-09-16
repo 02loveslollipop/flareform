@@ -57,7 +57,7 @@ test("CF-UNIT-001 full pagination and duplicate API state fail closed", async ()
       call.url.startsWith("https://api.cloudflare.com/client/v4/zones/"),
     ),
   );
-  assert.ok(calls.every((call) => call.options.redirect === "error"));
+  assert.ok(calls.every((call) => call.options.redirect === "manual"));
   const duplicate = createCloudflareClient({
     token: "token",
     fetchImpl: async (url) =>

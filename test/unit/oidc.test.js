@@ -56,7 +56,7 @@ async function fixture() {
   let clock = Date.now();
   const fetchImpl = async (url, options) => {
     requests++;
-    assert.equal(options.redirect, "error");
+    assert.equal(options.redirect, "manual");
     if (url.endsWith("openid-configuration"))
       return redirectDiscovery
         ? Response.redirect("https://evil.test/jwks")
